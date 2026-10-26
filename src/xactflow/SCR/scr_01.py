@@ -24,10 +24,10 @@ stub(
     post_config=False,
     description=(
         "Every IP-XACT document visible to a tool at one time shall have a unique VLNV. "
-        "Enforced separately in xactflow.library.Library.scan, which needs to see the whole "
-        "scanned set of documents at once to detect a duplicate; not expressible as a "
-        "single-document or single-elaborated-design check, so this entry exists only for "
-        "discoverability via SCR.all_rules()."
+        "Enforced separately in xactflow.library.Library.add, which every document indexed in "
+        "a library goes through, since detecting a duplicate needs the whole set at once; not "
+        "expressible as a single-document or single-elaborated-design check, so this entry "
+        "exists only for discoverability via SCR.all_rules()."
     ),
 )
 

@@ -82,6 +82,26 @@ elaborated.interconnections   # list[ElaboratedInterconnection], every endpoint 
 elaborated.diagnostics        # list[Diagnostic] from every applicable SCR rule
 ```
 
+`Library.scan` raises `FileNotFoundError` or `NotADirectoryError`, for a scan root that
+does not exist or is not a directory. A root from which no IEEE 1685-2022 document gets indexed,
+and files in another IP-XACT version's namespace (e.g. 1685-2014), are only reported as
+warnings in `library.diagnostics`, and the scan goes on. Documents that only exist in memory, such
+as an importer's result, are indexed with `Library.add`, which runs the same checks as for a
+scanned file:
+
+```python
+component = SomeImporter().import_(Path("ip.sv"))
+library.add(component, path=Path("ip.sv"))   # path is optional, it only records the origin.
+library.add(component, replace=True)         # Overwrite an existing entry instead.
+```
+
+A single file picked by hand is indexed with `Library.add_file`, which applies the same namespace
+filtering and checks as a scanned file and raises `FileNotFoundError` if the file does not exist:
+
+```python
+library.add_file("path/to/extra_component.xml")
+```
+
 ## Expression evaluation
 
 IP-XACT `Expression` fields (`addressOffset`, `size`, `range`, `width`, `bitOffset`, parameter

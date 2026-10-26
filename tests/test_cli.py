@@ -25,6 +25,20 @@ def test_elaborate_happy_path_exits_zero(capsys):
     assert "no errors" in out
 
 
+def test_elaborate_with_missing_lib_dir_exits_nonzero(capsys, tmp_path):
+    exit_code = main(
+        [
+            "elaborate",
+            str(FIXTURES / "basic" / "top_design.xml"),
+            "--lib",
+            str(tmp_path / "does_not_exist"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "library scan root does not exist" in capsys.readouterr().err
+
+
 def test_elaborate_reports_unresolvable_component_ref_and_exits_nonzero(capsys):
     exit_code = main(
         [
