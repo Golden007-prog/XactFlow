@@ -1,6 +1,6 @@
 """IEEE 1685-2022 Annex B, Table B.1: Cross-references and VLNVs (43 rules, SCR 1.1-1.43).
 
-SCR 1.2 and SCR 1.9 are implemented, exercised by elaborate.resolver. Every other rule in
+SCR 1.2 and SCR 1.9 are implemented, exercised by link.resolver. Every other rule in
 this table is registered via stub() so it is tracked and discoverable through
 SCR.all_rules(), with no check logic yet.
 """
@@ -13,7 +13,7 @@ from ..diagnostics import Diagnostic, Severity
 from .registry import rule, stub
 
 if TYPE_CHECKING:
-    from ..elaborate.model import ElaboratedDesign
+    from ..link.model import LinkedDesign
 
 
 stub(
@@ -26,7 +26,7 @@ stub(
         "Every IP-XACT document visible to a tool at one time shall have a unique VLNV. "
         "Enforced separately in xactflow.library.Library.add, which every document indexed in "
         "a library goes through, since detecting a duplicate needs the whole set at once; not "
-        "expressible as a single-document or single-elaborated-design check, so this entry "
+        "expressible as a single-document or single-linked-design check, so this entry "
         "exists only for discoverability via SCR.all_rules()."
     ),
 )
@@ -43,15 +43,15 @@ stub(
         "component."
     ),
 )
-def _check_component_ref_is_component(elaborated: "ElaboratedDesign") -> Iterator[Diagnostic]:
-    for instance_ref in elaborated.design.component_instances:
-        resolved = elaborated.instances.get(instance_ref.instance_name)
+def _check_component_ref_is_component(linked: "LinkedDesign") -> Iterator[Diagnostic]:
+    for instance_ref in linked.design.component_instances:
+        resolved = linked.instances.get(instance_ref.instance_name)
         # Identity, not just name presence: two componentInstance elements can share a name,
-        # elaborated.instances only has room for one entry per name.
+        # linked.instances only has room for one entry per name.
         if resolved is not None and resolved.source is instance_ref:
             continue
         vlnv = instance_ref.component_ref.vlnv
-        existing = elaborated.library.get(vlnv)
+        existing = linked.library.get(vlnv)
         if existing is None:
             detail = f"no document with VLNV {vlnv} was found in the library"
         else:
@@ -62,7 +62,7 @@ def _check_component_ref_is_component(elaborated: "ElaboratedDesign") -> Iterato
                 f"resolve to a component: {detail}"
             ),
             severity=Severity.ERROR,
-            location=f"{elaborated.vlnv}/{instance_ref.instance_name}",
+            location=f"{linked.vlnv}/{instance_ref.instance_name}",
             rule_id="SCR 1.9",
             rule_name="compRefVLNVisComp",
         )
@@ -80,11 +80,11 @@ def _check_component_ref_is_component(elaborated: "ElaboratedDesign") -> Iterato
         "for the busType and abstractionRef of every resolved instance's bus interfaces."
     ),
 )
-def _check_bus_interface_vlnv_refs_exist(elaborated: "ElaboratedDesign") -> Iterator[Diagnostic]:
-    for instance in elaborated.instances.values():
+def _check_bus_interface_vlnv_refs_exist(linked: "LinkedDesign") -> Iterator[Diagnostic]:
+    for instance in linked.instances.values():
         for bus_interface in instance.component.bus_interfaces:
             bus_vlnv = bus_interface.bus_type.vlnv
-            if elaborated.library.get_bus_definition(bus_vlnv) is None:
+            if linked.library.get_bus_definition(bus_vlnv) is None:
                 yield Diagnostic(
                     message=(
                         f"busInterface '{bus_interface.name}' busType references VLNV "
@@ -97,7 +97,7 @@ def _check_bus_interface_vlnv_refs_exist(elaborated: "ElaboratedDesign") -> Iter
                 )
             for abstraction_type in bus_interface.abstraction_types:
                 abstraction_vlnv = abstraction_type.abstraction_ref.vlnv
-                if elaborated.library.get_abstraction_definition(abstraction_vlnv) is None:
+                if linked.library.get_abstraction_definition(abstraction_vlnv) is None:
                     yield Diagnostic(
                         message=(
                             f"busInterface '{bus_interface.name}' abstractionRef references "

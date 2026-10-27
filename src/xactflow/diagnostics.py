@@ -14,7 +14,7 @@ class Severity(str, Enum):
 
 @dataclass(frozen=True)
 class Diagnostic:
-    """One finding produced by library scanning, elaboration, or SCR checking.
+    """One finding produced by library scanning, linking, or SCR checking.
 
     rule_id and rule_name are set when the finding corresponds to an IEEE 1685-2022
     Annex B semantic consistency rule (e.g. rule_id "SCR 1.1", rule_name "uniqueVLNV").

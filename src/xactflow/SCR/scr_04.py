@@ -2,8 +2,8 @@
 (6 rules, SCR 4.1-4.6).
 
 None of these are implemented yet; every rule is registered via stub() so it is tracked and
-discoverable through SCR.all_rules(). elaborate.resolver already resolves monitor
-interconnections into the elaborated graph; these rules would check that resolved graph.
+discoverable through SCR.all_rules(). link.resolver already resolves monitor
+interconnections into the linked graph; these rules would check that resolved graph.
 """
 
 from __future__ import annotations

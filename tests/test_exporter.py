@@ -25,8 +25,8 @@ def test_concrete_exporter_subclass_can_be_instantiated_and_called():
     assert exporter.calls == [(None, Path("/tmp/out"), {"foo": "bar"})]
 
 
-def test_export_accepts_any_kind_of_subject_not_only_an_elaborated_design():
-    # subject is deliberately untyped: an exporter may receive an ElaboratedDesign, a bare
+def test_export_accepts_any_kind_of_subject_not_only_an_linked_design():
+    # subject is deliberately untyped: an exporter may receive a LinkedDesign, a bare
     # ipxact.Component/Design an Importer just produced, or anything else it chooses to support.
     class FakeExporter(Exporter):
         name = "fake"

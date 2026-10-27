@@ -2,7 +2,7 @@
 
 None of these are implemented yet; every rule is registered via stub() so it is tracked and
 discoverable through SCR.all_rules(). Same caveat as Table B.10: these need a hierarchical
-family of bus interfaces concept elaborate.resolver does not build yet.
+family of bus interfaces concept link.resolver does not build yet.
 """
 
 from __future__ import annotations

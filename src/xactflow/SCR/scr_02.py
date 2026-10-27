@@ -1,6 +1,6 @@
 """IEEE 1685-2022 Annex B, Table B.2: Interconnections (19 rules, SCR 2.1-2.19).
 
-SCR 2.1 through SCR 2.5 are implemented, exercised by elaborate.resolver. Every other rule
+SCR 2.1 through SCR 2.5 are implemented, exercised by link.resolver. Every other rule
 in this table is registered via stub() so it is tracked and discoverable through
 SCR.all_rules(), with no check logic yet.
 """
@@ -15,7 +15,7 @@ from ..diagnostics import Diagnostic, Severity
 from .registry import rule, stub
 
 if TYPE_CHECKING:
-    from ..elaborate.model import ElaboratedDesign, ElaboratedInstance, ElaboratedInterconnection, ResolvedInterfaceEndpoint
+    from ..link.model import LinkedDesign, LinkedInstance, LinkedInterconnection, ResolvedInterfaceEndpoint
 
 
 def _active_interfaces(interconnection: ipxact.Interconnection) -> Iterator[ipxact.ActiveInterface]:
@@ -23,12 +23,12 @@ def _active_interfaces(interconnection: ipxact.Interconnection) -> Iterator[ipxa
     yield from interconnection.other_active_interfaces
 
 
-def _find_bus_interface(instance: "ElaboratedInstance", bus_ref: str):
+def _find_bus_interface(instance: "LinkedInstance", bus_ref: str):
     return next((bi for bi in instance.component.bus_interfaces if bi.name == bus_ref), None)
 
 
 def _unordered_endpoint_pairs(
-    interconnection: "ElaboratedInterconnection",
+    interconnection: "LinkedInterconnection",
 ) -> Iterator[Tuple["ResolvedInterfaceEndpoint", "ResolvedInterfaceEndpoint"]]:
     endpoints = interconnection.endpoints
     for i in range(len(endpoints)):
@@ -68,10 +68,10 @@ def _bus_definitions_compatible(a: ipxact.VLNV, b: ipxact.VLNV, library) -> bool
         "VLNV of the component instance named in componentInstanceRef."
     ),
 )
-def _check_active_interfaces_exist(elaborated: "ElaboratedDesign") -> Iterator[Diagnostic]:
-    for interconnection in elaborated.design.interconnections:
+def _check_active_interfaces_exist(linked: "LinkedDesign") -> Iterator[Diagnostic]:
+    for interconnection in linked.design.interconnections:
         for active_interface in _active_interfaces(interconnection):
-            instance = elaborated.instances.get(active_interface.component_instance_ref)
+            instance = linked.instances.get(active_interface.component_instance_ref)
             if instance is None:
                 yield Diagnostic(
                     message=(
@@ -80,7 +80,7 @@ def _check_active_interfaces_exist(elaborated: "ElaboratedDesign") -> Iterator[D
                         f"does not resolve to a component instance"
                     ),
                     severity=Severity.ERROR,
-                    location=f"{elaborated.vlnv}/{interconnection.name}",
+                    location=f"{linked.vlnv}/{interconnection.name}",
                     rule_id="SCR 2.1",
                     rule_name="connectedIntfsMustExist",
                 )
@@ -93,7 +93,7 @@ def _check_active_interfaces_exist(elaborated: "ElaboratedDesign") -> Iterator[D
                         f"component instance '{instance.instance_name}'"
                     ),
                     severity=Severity.ERROR,
-                    location=f"{elaborated.vlnv}/{interconnection.name}",
+                    location=f"{linked.vlnv}/{interconnection.name}",
                     rule_id="SCR 2.1",
                     rule_name="connectedIntfsMustExist",
                 )
@@ -111,11 +111,11 @@ def _check_active_interfaces_exist(elaborated: "ElaboratedDesign") -> Iterator[D
         "elements within the busInterface elements shall reference compatible busDefinitions."
     ),
 )
-def _check_interconnection_bus_compat(elaborated: "ElaboratedDesign") -> Iterator[Diagnostic]:
-    for interconnection in elaborated.interconnections:
+def _check_interconnection_bus_compat(linked: "LinkedDesign") -> Iterator[Diagnostic]:
+    for interconnection in linked.interconnections:
         for a, b in _unordered_endpoint_pairs(interconnection):
             if not _bus_definitions_compatible(
-                a.bus_interface.bus_type.vlnv, b.bus_interface.bus_type.vlnv, elaborated.library
+                a.bus_interface.bus_type.vlnv, b.bus_interface.bus_type.vlnv, linked.library
             ):
                 yield Diagnostic(
                     message=(
@@ -126,7 +126,7 @@ def _check_interconnection_bus_compat(elaborated: "ElaboratedDesign") -> Iterato
                         f"({b.bus_interface.bus_type.vlnv})"
                     ),
                     severity=Severity.ERROR,
-                    location=f"{elaborated.vlnv}/{interconnection.name}",
+                    location=f"{linked.vlnv}/{interconnection.name}",
                     rule_id="SCR 2.2",
                     rule_name="connectedIntfsCompat",
                 )
@@ -176,9 +176,9 @@ def _check_interface_connected_once(document: object) -> Iterator[Diagnostic]:
         "type target or mirrored-initiator, or hierarchical interfaces of type initiator."
     ),
 )
-def _check_active_initiator_connects(elaborated: "ElaboratedDesign") -> Iterator[Diagnostic]:
+def _check_active_initiator_connects(linked: "LinkedDesign") -> Iterator[Diagnostic]:
     allowed = {ipxact.InterfaceMode.TARGET, ipxact.InterfaceMode.MIRRORED_INITIATOR}
-    for interconnection in elaborated.interconnections:
+    for interconnection in linked.interconnections:
         for a, b in _unordered_endpoint_pairs(interconnection):
             a_mode, b_mode = a.bus_interface.mode, b.bus_interface.mode
             violated = (a_mode is ipxact.InterfaceMode.INITIATOR and b_mode not in allowed) or (
@@ -194,7 +194,7 @@ def _check_active_initiator_connects(elaborated: "ElaboratedDesign") -> Iterator
                         f"to target or mirroredInitiator interfaces"
                     ),
                     severity=Severity.ERROR,
-                    location=f"{elaborated.vlnv}/{interconnection.name}",
+                    location=f"{linked.vlnv}/{interconnection.name}",
                     rule_id="SCR 2.4",
                     rule_name="activeMstConnect",
                 )
@@ -212,9 +212,9 @@ def _check_active_initiator_connects(elaborated: "ElaboratedDesign") -> Iterator
     ),
 )
 def _check_active_mirrored_target_connects(
-    elaborated: "ElaboratedDesign",
+    linked: "LinkedDesign",
 ) -> Iterator[Diagnostic]:
-    for interconnection in elaborated.interconnections:
+    for interconnection in linked.interconnections:
         for a, b in _unordered_endpoint_pairs(interconnection):
             a_mode, b_mode = a.bus_interface.mode, b.bus_interface.mode
             violated = (
@@ -234,7 +234,7 @@ def _check_active_mirrored_target_connects(
                         f"connect to target interfaces"
                     ),
                     severity=Severity.ERROR,
-                    location=f"{elaborated.vlnv}/{interconnection.name}",
+                    location=f"{linked.vlnv}/{interconnection.name}",
                     rule_id="SCR 2.5",
                     rule_name="activeMSlvConnect",
                 )

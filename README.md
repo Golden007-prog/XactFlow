@@ -1,6 +1,6 @@
 # XactFlow
 
-Multi-file [IEEE 1685-2022](https://standards.ieee.org/ieee/1685/10307/) IP-XACT elaboration
+Multi-file [IEEE 1685-2022](https://standards.ieee.org/ieee/1685/10307/) IP-XACT linking
 and semantic consistency checking, built on top of
 [`ipxact-compiler`](https://github.com/IP-XACT/ipxact-compiler) (a standalone single-file
 IP-XACT parser).
@@ -30,11 +30,11 @@ Requires Python >= 3.9.
 ## CLI
 
 ```bash
-xactflow elaborate <design.xml> [--lib DIR ...] [--config <designConfig.xml>]
+xactflow link <design.xml> [--lib DIR ...] [--config <designConfig.xml>]
 xactflow check <file.xml>
 ```
 
-`elaborate` scans every `--lib` directory into a library indexed by VLNV, resolves `<design.xml>`
+`link` scans every `--lib` directory into a library indexed by VLNV, resolves `<design.xml>`
 against it (component instances, bus interfaces, interconnections, monitor interconnections, ad
 hoc connections), runs SCR checks on the result, prints every diagnostic, and exits nonzero if
 any of them is an error.
@@ -70,16 +70,16 @@ a clean, expected rejection.
 
 ```python
 import ipxact
-from xactflow import Library, elaborate
+from xactflow import Library, link
 
 library = Library.scan("path/to/ip/library")
 design = ipxact.parse_file("path/to/top_design.xml")
 
-elaborated = elaborate(design, library)
+linked = link(design, library)
 
-elaborated.instances          # dict[str, ElaboratedInstance], keyed by instance name
-elaborated.interconnections   # list[ElaboratedInterconnection], every endpoint resolved
-elaborated.diagnostics        # list[Diagnostic] from every applicable SCR rule
+linked.instances          # dict[str, LinkedInstance], keyed by instance name
+linked.interconnections   # list[LinkedInterconnection], every endpoint resolved
+linked.diagnostics        # list[Diagnostic] from every applicable SCR rule
 ```
 
 `Library.scan` raises `FileNotFoundError` or `NotADirectoryError`, for a scan root that
@@ -150,8 +150,8 @@ IP-XACT expression evaluation to have check logic; `xactflow.evaluate()` (see [E
 evaluation](#expression-evaluation) above) now exists, but isn't wired into any of these rules
 yet.
 
-`SCR.run_single_doc_checks(document)` and `SCR.run_post_config_checks(elaborated)` are public,
-standalone functions independent of the elaborator's internals, so any caller (including a
+`SCR.run_single_doc_checks(document)` and `SCR.run_post_config_checks(linked)` are public,
+standalone functions independent of the linker's internals, so any caller (including a
 future exporter that itself emits IP-XACT) should re-run SCR checking on IP-XACT it produced, not
 only on the input.
 
@@ -164,7 +164,7 @@ implemented in this repository:
 - `xactflow.Exporter` (`xactflow.exporters` entry point group): turns some IP-XACT-flavored
   Python object into an output artifact, e.g. RTL, documentation, or another IP-XACT file. Its
   `export(subject, output_dir, **options)` method leaves `subject` deliberately untyped: it may
-  be an `ElaboratedDesign` (a fully resolved multi-instance design), a bare `ipxact.Component` or
+  be a `LinkedDesign` (a fully resolved multi-instance design), a bare `ipxact.Component` or
   `ipxact.Design`, or anything else a given exporter chooses to support.
   Each exporter documents and checks what it actually accepts.
 - `xactflow.Importer` (`xactflow.importers` entry point group): reads a non-IP-XACT source (a
@@ -188,11 +188,11 @@ html = "xactflow_html:HtmlExporter"
   (see [Expression evaluation](#expression-evaluation) above) can compute a concrete value from
   an `Expression` string, but nothing in `xactflow.SCR` calls it yet, so the
   overlap/alignment/stride SCRs, from having real check logic.
-- **No multi-level design hierarchy.** `elaborate()` resolves one `Design` flat, it does not
+- **No multi-level design hierarchy.** `link()` resolves one `Design` flat, it does not
   recurse into a design nested inside another design's hierarchy. It will be supported in the future.
-- **No `DesignConfiguration` application.** A `DesignConfiguration` can be passed to `elaborate()`
+- **No `DesignConfiguration` application.** A `DesignConfiguration` can be passed to `link()`
   and its single-doc rules get checked, but nothing actually applies it yet.
-- **Monitor interconnections and ad hoc connections resolve but aren't checked.** `elaborate()`
+- **Monitor interconnections and ad hoc connections resolve but aren't checked.** `link()`
   resolves both into the graph, but no SCR rule (Table B.4, or the ad hoc rules in B.2/B.6) has
   check logic yet, so a broken monitor or ad hoc reference is silently dropped rather than
   reported.
@@ -204,9 +204,9 @@ html = "xactflow_html:HtmlExporter"
 - Wire `xactflow.evaluate()` into the overlap/alignment/stride SCR rules it was built to unblock.
 - String expression and IP-XACT builtin function (`$ipxact_index_value()` and similar) support
   in `xactflow.evaluate()`.
-- Multi-level design hierarchy elaboration.
+- Multi-level design hierarchy linking.
 - A better SCR coverage, especially for the single file and pre config ones.
-- The actual exporter and importer plugin packages (an elaborated design to RTL exporter, an IP-XACT-emitting
+- The actual exporter and importer plugin packages (a linked design to RTL exporter, an IP-XACT-emitting
   exporter (component & design), a SystemVerilog-with-metadata importer, etc.), each in its own repository per
   [Plugins](#plugins) above.
 

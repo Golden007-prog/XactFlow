@@ -8,7 +8,7 @@ from pathlib import Path
 import ipxact
 
 from xactflow import SCR
-from xactflow.elaborate import elaborate
+from xactflow.link import link
 from xactflow.library import Library, LibraryEntry
 
 
@@ -82,9 +82,9 @@ def test_scr_1_2_reports_unresolvable_bus_type():
         [_instance("i0", component_vlnv)],
         [],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    scr_1_2 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 1.2"]
+    scr_1_2 = [d for d in linked.diagnostics if d.rule_id == "SCR 1.2"]
     assert len(scr_1_2) == 1
     assert "bif" in scr_1_2[0].message
 
@@ -102,14 +102,14 @@ def test_scr_2_1_reports_bus_ref_typo_on_an_otherwise_resolved_instance():
         [_instance("a0", a_vlnv), _instance("b0", b_vlnv)],
         [_interconnection("conn0", _active_interface("a0", "bif"), _active_interface("b0", "wrong_name"))],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
     # the interconnection keeps its one resolved endpoint (a0) rather than being dropped
     # entirely; SCR 2.1 reports the typo on b0's side.
-    assert len(elaborated.interconnections) == 1
-    resolved_names = {e.instance.instance_name for e in elaborated.interconnections[0].endpoints}
+    assert len(linked.interconnections) == 1
+    resolved_names = {e.instance.instance_name for e in linked.interconnections[0].endpoints}
     assert resolved_names == {"a0"}
-    scr_2_1 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.1"]
+    scr_2_1 = [d for d in linked.diagnostics if d.rule_id == "SCR 2.1"]
     assert len(scr_2_1) == 1
     assert "wrong_name" in scr_2_1[0].message
 
@@ -126,10 +126,10 @@ def test_scr_2_2_reports_incompatible_bus_definitions():
         [_instance("a0", a_vlnv), _instance("b0", b_vlnv)],
         [_interconnection("conn0", _active_interface("a0", "bif"), _active_interface("b0", "bif"))],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    assert len(elaborated.interconnections) == 1  # both endpoints resolved, just incompatible
-    scr_2_2 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.2"]
+    assert len(linked.interconnections) == 1  # both endpoints resolved, just incompatible
+    scr_2_2 = [d for d in linked.diagnostics if d.rule_id == "SCR 2.2"]
     assert len(scr_2_2) == 1
 
 
@@ -157,13 +157,13 @@ def test_scr_2_2_still_fires_when_another_endpoint_in_the_same_interconnection_f
             )
         ],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    resolved_names = {e.instance.instance_name for e in elaborated.interconnections[0].endpoints}
+    resolved_names = {e.instance.instance_name for e in linked.interconnections[0].endpoints}
     assert resolved_names == {"a0", "b0"}
-    scr_2_1 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.1"]
+    scr_2_1 = [d for d in linked.diagnostics if d.rule_id == "SCR 2.1"]
     assert len(scr_2_1) == 1
-    scr_2_2 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.2"]
+    scr_2_2 = [d for d in linked.diagnostics if d.rule_id == "SCR 2.2"]
     assert len(scr_2_2) == 1
 
 
@@ -181,9 +181,9 @@ def test_scr_2_2_allows_bus_definitions_related_by_extends():
         [_instance("a0", a_vlnv), _instance("b0", b_vlnv)],
         [_interconnection("conn0", _active_interface("a0", "bif"), _active_interface("b0", "bif"))],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    assert [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.2"] == []
+    assert [d for d in linked.diagnostics if d.rule_id == "SCR 2.2"] == []
 
 
 def test_scr_2_3_reports_an_interface_connected_twice_within_one_design():
@@ -215,11 +215,11 @@ def test_scr_2_4_reports_initiator_connected_to_initiator():
         [_instance("a0", a_vlnv), _instance("b0", b_vlnv)],
         [_interconnection("conn0", _active_interface("a0", "bif"), _active_interface("b0", "bif"))],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    scr_2_4 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.4"]
+    scr_2_4 = [d for d in linked.diagnostics if d.rule_id == "SCR 2.4"]
     assert len(scr_2_4) == 1
-    assert [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.5"] == []
+    assert [d for d in linked.diagnostics if d.rule_id == "SCR 2.5"] == []
 
 
 def test_scr_2_5_reports_mirrored_target_connected_to_something_other_than_target():
@@ -234,9 +234,9 @@ def test_scr_2_5_reports_mirrored_target_connected_to_something_other_than_targe
         [_instance("a0", a_vlnv), _instance("b0", b_vlnv)],
         [_interconnection("conn0", _active_interface("a0", "bif"), _active_interface("b0", "bif"))],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    scr_2_5 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.5"]
+    scr_2_5 = [d for d in linked.diagnostics if d.rule_id == "SCR 2.5"]
     assert len(scr_2_5) == 1
 
 
@@ -252,6 +252,6 @@ def test_initiator_to_target_connection_has_no_mode_diagnostics():
         [_instance("a0", a_vlnv), _instance("b0", b_vlnv)],
         [_interconnection("conn0", _active_interface("a0", "bif"), _active_interface("b0", "bif"))],
     )
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    assert elaborated.diagnostics == []
+    assert linked.diagnostics == []

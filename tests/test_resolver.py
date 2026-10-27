@@ -2,7 +2,7 @@ from pathlib import Path
 
 import ipxact
 
-from xactflow.elaborate import elaborate
+from xactflow.link import link
 from xactflow.library import Library, LibraryEntry
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -12,20 +12,20 @@ def _load_top_design(library: Library) -> ipxact.Design:
     return library.get_design(ipxact.VLNV.parse("example.org:soc:top:1.0"))
 
 
-def test_elaborate_resolves_instances_and_interconnections_with_no_diagnostics():
+def test_link_resolves_instances_and_interconnections_with_no_diagnostics():
     library = Library.scan(FIXTURES / "basic")
     design = _load_top_design(library)
 
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    assert elaborated.diagnostics == []
-    assert set(elaborated.instances) == {"init0", "tgt0"}
-    assert elaborated.instances["init0"].component_vlnv == ipxact.VLNV.parse(
+    assert linked.diagnostics == []
+    assert set(linked.instances) == {"init0", "tgt0"}
+    assert linked.instances["init0"].component_vlnv == ipxact.VLNV.parse(
         "example.org:ip:initiator_comp:1.0"
     )
 
-    assert len(elaborated.interconnections) == 1
-    interconnection = elaborated.interconnections[0]
+    assert len(linked.interconnections) == 1
+    interconnection = linked.interconnections[0]
     assert interconnection.name == "conn0"
     endpoints = {
         (endpoint.instance.instance_name, endpoint.bus_interface.name)
@@ -34,7 +34,7 @@ def test_elaborate_resolves_instances_and_interconnections_with_no_diagnostics()
     assert endpoints == {("init0", "bus_if"), ("tgt0", "bus_if")}
 
 
-def test_elaborate_reports_unresolvable_component_ref():
+def test_link_reports_unresolvable_component_ref():
     library = Library.scan(FIXTURES / "basic")
     design = _load_top_design(library)
     # point one instance at a VLNV that does not exist in the library
@@ -42,24 +42,24 @@ def test_elaborate_reports_unresolvable_component_ref():
         "example.org", "ip", "does_not_exist", "1.0"
     )
 
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    assert "init0" not in elaborated.instances
-    scr_1_9 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 1.9"]
+    assert "init0" not in linked.instances
+    scr_1_9 = [d for d in linked.diagnostics if d.rule_id == "SCR 1.9"]
     assert len(scr_1_9) == 1
     assert "does_not_exist" in scr_1_9[0].message or "init0" in scr_1_9[0].message
 
     # the interconnection keeps whatever endpoints did resolve (here, just tgt0; init0's
     # endpoint fails since its componentRef is now broken), and SCR 2.1 reports why.
-    assert len(elaborated.interconnections) == 1
-    resolved_names = {e.instance.instance_name for e in elaborated.interconnections[0].endpoints}
+    assert len(linked.interconnections) == 1
+    resolved_names = {e.instance.instance_name for e in linked.interconnections[0].endpoints}
     assert resolved_names == {"tgt0"}
-    scr_2_1 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 2.1"]
+    scr_2_1 = [d for d in linked.diagnostics if d.rule_id == "SCR 2.1"]
     assert len(scr_2_1) == 1
 
 
 def test_scr_1_9_still_fires_when_a_duplicate_instance_name_already_resolved():
-    # Two componentInstance elements sharing a name, one resolving and one not: elaborated
+    # Two componentInstance elements sharing a name, one resolving and one not: linked
     # .instances only has room for one entry per name, so SCR 1.9's check must not use bare
     # name-presence as a stand-in for "did *this* instance_ref resolve".
     library = Library.scan(FIXTURES / "basic")
@@ -74,9 +74,9 @@ def test_scr_1_9_still_fires_when_a_duplicate_instance_name_already_resolved():
     ]
     design.interconnections = []
 
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    scr_1_9 = [d for d in elaborated.diagnostics if d.rule_id == "SCR 1.9"]
+    scr_1_9 = [d for d in linked.diagnostics if d.rule_id == "SCR 1.9"]
     assert len(scr_1_9) == 1
     assert "does_not_exist" in scr_1_9[0].message
 
@@ -85,7 +85,7 @@ def _vref(vlnv: ipxact.VLNV) -> ipxact.VLNVRef:
     return ipxact.VLNVRef(vlnv.vendor, vlnv.library, vlnv.name, vlnv.version)
 
 
-def test_elaborate_resolves_ad_hoc_connections_and_drops_unresolvable_refs():
+def test_link_resolves_ad_hoc_connections_and_drops_unresolvable_refs():
     component_vlnv = ipxact.VLNV("example.org", "ip", "withport", "1.0")
     component = ipxact.Component(
         vlnv=component_vlnv,
@@ -114,14 +114,14 @@ def test_elaborate_resolves_ad_hoc_connections_and_drops_unresolvable_refs():
         ],
     )
 
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    assert set(elaborated.ad_hoc_connections) == {"clk_net"}
-    resolved = elaborated.ad_hoc_connections["clk_net"]
+    assert set(linked.ad_hoc_connections) == {"clk_net"}
+    resolved = linked.ad_hoc_connections["clk_net"]
     assert [(r.instance.instance_name, r.port.name) for r in resolved] == [("i0", "clk"), ("i1", "clk")]
 
 
-def test_elaborate_resolves_monitor_interconnections():
+def test_link_resolves_monitor_interconnections():
     bus_vlnv = ipxact.VLNV("example.org", "bus", "a", "1.0")
     active_vlnv = ipxact.VLNV("example.org", "ip", "a", "1.0")
     monitor_vlnv = ipxact.VLNV("example.org", "ip", "mon", "1.0")
@@ -156,9 +156,9 @@ def test_elaborate_resolves_monitor_interconnections():
         ],
     )
 
-    elaborated = elaborate(design, library)
+    linked = link(design, library)
 
-    assert len(elaborated.monitor_interconnections) == 1
-    monitor_interconnection = elaborated.monitor_interconnections[0]
+    assert len(linked.monitor_interconnections) == 1
+    monitor_interconnection = linked.monitor_interconnections[0]
     assert monitor_interconnection.monitored_active_interface.instance.instance_name == "a0"
     assert [m.instance.instance_name for m in monitor_interconnection.monitor_interfaces] == ["mon0"]

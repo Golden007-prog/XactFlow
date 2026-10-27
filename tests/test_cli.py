@@ -9,10 +9,10 @@ from xactflow.importer import Importer
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def test_elaborate_happy_path_exits_zero(capsys):
+def test_link_happy_path_exits_zero(capsys):
     exit_code = main(
         [
-            "elaborate",
+            "link",
             str(FIXTURES / "basic" / "top_design.xml"),
             "--lib",
             str(FIXTURES / "basic"),
@@ -21,14 +21,14 @@ def test_elaborate_happy_path_exits_zero(capsys):
 
     assert exit_code == 0
     out = capsys.readouterr().out
-    assert "elaborated 'example.org:soc:top:1.0'" in out
+    assert "linked 'example.org:soc:top:1.0'" in out
     assert "no errors" in out
 
 
-def test_elaborate_with_missing_lib_dir_exits_nonzero(capsys, tmp_path):
+def test_link_with_missing_lib_dir_exits_nonzero(capsys, tmp_path):
     exit_code = main(
         [
-            "elaborate",
+            "link",
             str(FIXTURES / "basic" / "top_design.xml"),
             "--lib",
             str(tmp_path / "does_not_exist"),
@@ -39,10 +39,10 @@ def test_elaborate_with_missing_lib_dir_exits_nonzero(capsys, tmp_path):
     assert "library scan root does not exist" in capsys.readouterr().err
 
 
-def test_elaborate_reports_unresolvable_component_ref_and_exits_nonzero(capsys):
+def test_link_reports_unresolvable_component_ref_and_exits_nonzero(capsys):
     exit_code = main(
         [
-            "elaborate",
+            "link",
             str(FIXTURES / "cli" / "broken_design.xml"),
             "--lib",
             str(FIXTURES / "basic"),
@@ -54,14 +54,14 @@ def test_elaborate_reports_unresolvable_component_ref_and_exits_nonzero(capsys):
     assert "SCR 1.9" in err
 
 
-def test_elaborate_does_not_duplicate_diagnostics_when_design_is_also_inside_lib(capsys):
+def test_link_does_not_duplicate_diagnostics_when_design_is_also_inside_lib(capsys):
     # Library.scan already single-doc-checks every file it scans, including the top design
-    # itself when --lib points at (or includes) the directory it lives in; elaborate() checks
+    # itself when --lib points at (or includes) the directory it lives in; link() checks
     # the same design again independently. The two diagnostic lists must be deduped when
     # combined, not just concatenated.
     exit_code = main(
         [
-            "elaborate",
+            "link",
             str(FIXTURES / "cli" / "duplicate_interface_design.xml"),
             "--lib",
             str(FIXTURES / "cli"),
@@ -112,7 +112,7 @@ def test_a_broken_installed_plugin_does_not_crash_unrelated_commands(monkeypatch
 
 def test_no_plugin_subcommands_when_none_are_installed(capsys):
     # with no exporters/importers registered (the real state of this repo, which ships none),
-    # only the built-in elaborate/check subcommands should exist.
+    # only the built-in link/check subcommands should exist.
     with pytest.raises(SystemExit):
         main(["fake-exporter", str(FIXTURES / "basic" / "top_design.xml")])
     assert "invalid choice" in capsys.readouterr().err
@@ -152,7 +152,7 @@ def test_installed_exporter_becomes_its_own_top_level_subcommand(monkeypatch, tm
     assert "exported 'example.org:soc:top:1.0' via 'fake-exporter'" in capsys.readouterr().out
 
 
-def test_installed_exporter_does_not_run_when_elaboration_has_errors(monkeypatch, tmp_path):
+def test_installed_exporter_does_not_run_when_linking_has_errors(monkeypatch, tmp_path):
     monkeypatch.setattr("xactflow.cli.discover_exporters", lambda: {"fake-exporter": _FakeExporter})
     _FakeExporter.exported.clear()
 

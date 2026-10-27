@@ -14,7 +14,7 @@ class Exporter(abc.ABC):
 
     An exporter turns some IP-XACT-flavored Python object into an output artifact (RTL,
     documentation, another IP-XACT file, etc). `subject` is deliberately untyped: it may be an
-    ElaboratedDesign, a bare ipxact.Component or ipxact.Design, or anything else a given exporter
+    LinkedDesign, a bare ipxact.Component or ipxact.Design, or anything else a given exporter
     chooses to support. It is each exporter's own job to check what it was actually handed and
     document what it accepts, and to raise a plain TypeError when `subject` is not one of the
     types it supports. That specific exception type is a load-bearing convention, not just a

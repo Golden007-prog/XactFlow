@@ -2,8 +2,8 @@
 
 None of these are implemented yet; every rule is registered via stub() so it is tracked and
 discoverable through SCR.all_rules(). These need a "hierarchical family of bus interfaces"
-concept (bus interfaces linked across nested designs) that elaborate.resolver does not build
-yet: it elaborates one Design flat, with no recursion into sub-designs.
+concept (bus interfaces linked across nested designs) that link.resolver does not build
+yet: it links one Design flat, with no recursion into sub-designs.
 """
 
 from __future__ import annotations

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "xactflow"
 dynamic = ["version"]
-description = "Multi-file IP-XACT elaboration and semantic consistency checking on top of ipxact-compiler."
+description = "Multi-file IP-XACT linking and semantic consistency checking on top of ipxact-compiler."
 readme = "README.md"
 license = "LGPL-3.0-only"
 license-files = ["LICENSE"]
@@ -14,7 +14,7 @@ authors = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "ipxact-compiler",
+    "ipxact-compiler>=0.1.2",
     "lxml",
 ]
 keywords = [

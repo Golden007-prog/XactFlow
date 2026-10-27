@@ -10,7 +10,7 @@ from ..library import Library
 
 
 @dataclass
-class ElaboratedInstance:
+class LinkedInstance:
     """One ipxact:componentInstance resolved to its actual Component object."""
 
     instance_name: str
@@ -24,18 +24,18 @@ class ResolvedInterfaceEndpoint:
     """One interface endpoint (of an interconnection or a monitorInterconnection), resolved to
     its instance and bus interface."""
 
-    instance: ElaboratedInstance
+    instance: LinkedInstance
     bus_interface: ipxact.BusInterface
     source: Union[ipxact.ActiveInterface, ipxact.MonitorInterfaceRef]
 
 
 @dataclass
-class ElaboratedInterconnection:
+class LinkedInterconnection:
     """One ipxact:interconnection with every active interface endpoint resolved.
 
     hier_interfaces are left as-is (unresolved): they refer to a bus interface exposed by this
     design one level up, which only makes sense in the context of a parent design XactFlow does
-    not have when elaborating this design on its own.
+    not have when linking this design on its own.
     """
 
     name: str
@@ -45,7 +45,7 @@ class ElaboratedInterconnection:
 
 
 @dataclass
-class ElaboratedMonitorInterconnection:
+class LinkedMonitorInterconnection:
     """One ipxact:monitorInterconnection with its active and monitor endpoints resolved."""
 
     name: str
@@ -58,27 +58,27 @@ class ElaboratedMonitorInterconnection:
 class ResolvedPortReference:
     """One ipxact:internalPortReference resolved to its instance and physical Port."""
 
-    instance: ElaboratedInstance
+    instance: LinkedInstance
     port: ipxact.Port
     source: ipxact.InternalPortReference
 
 
 @dataclass
-class ElaboratedDesign:
+class LinkedDesign:
     """The result of resolving one Design (and optional DesignConfiguration) against a Library.
 
     Every reference that could be resolved now points at the real object instead of a VLNV or
     name string. References that could not be resolved are simply absent here;
-    scr.runner.run_post_config_checks(elaborated) is what explains why, by comparing this
+    scr.runner.run_post_config_checks(linked) is what explains why, by comparing this
     against the raw design in the `design` field.
     """
 
     vlnv: ipxact.VLNV
     design: ipxact.Design
     library: Library
-    instances: Dict[str, ElaboratedInstance] = field(default_factory=dict)
-    interconnections: List[ElaboratedInterconnection] = field(default_factory=list)
-    monitor_interconnections: List[ElaboratedMonitorInterconnection] = field(default_factory=list)
+    instances: Dict[str, LinkedInstance] = field(default_factory=dict)
+    interconnections: List[LinkedInterconnection] = field(default_factory=list)
+    monitor_interconnections: List[LinkedMonitorInterconnection] = field(default_factory=list)
     ad_hoc_connections: Dict[str, List[ResolvedPortReference]] = field(default_factory=dict)
     design_configuration: Optional[ipxact.DesignConfiguration] = None
     diagnostics: List[Diagnostic] = field(default_factory=list)
