@@ -1,1 +1,2 @@
 ipxact-compiler>=0.1.2
+lxml
