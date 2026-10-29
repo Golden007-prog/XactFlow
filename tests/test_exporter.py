@@ -89,3 +89,28 @@ def test_discover_exporters_returns_empty_dict_when_none_installed(monkeypatch):
     monkeypatch.setattr("xactflow.exporter._entry_points_for_group", lambda group: [])
 
     assert discover_exporters() == {}
+
+
+@pytest.mark.parametrize("error", [ImportError("missing dependency"), RuntimeError("broken plugin")])
+def test_discover_exporters_skips_failed_load_and_keeps_healthy_plugins(monkeypatch, capsys, error):
+    class BrokenEntryPoint:
+        name = "broken"
+
+        def load(self):
+            raise error
+
+    monkeypatch.setattr(
+        "xactflow.exporter._entry_points_for_group",
+        lambda group: [
+            _FakeEntryPoint("before", _FakeExporter),
+            BrokenEntryPoint(),
+            _FakeEntryPoint("after", _FakeExporter),
+        ],
+    )
+
+    assert discover_exporters() == {"before": _FakeExporter, "after": _FakeExporter}
+    warning = capsys.readouterr().err
+    assert "warning:" in warning
+    assert "broken" in warning
+    assert "xactflow.exporters" in warning
+    assert str(error) in warning

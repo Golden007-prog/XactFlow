@@ -95,19 +95,35 @@ def test_main_reports_a_clean_error_for_a_missing_file(capsys):
     assert capsys.readouterr().err.startswith("error: ")
 
 
-def test_a_broken_installed_plugin_does_not_crash_unrelated_commands(monkeypatch, capsys):
+@pytest.mark.parametrize("group", ["exporter", "importer"])
+@pytest.mark.parametrize("command", ["check", "link"])
+def test_a_broken_installed_plugin_does_not_crash_unrelated_commands(
+    monkeypatch, capsys, group, command
+):
     # discover_exporters()/discover_importers() run during _build_parser(), before any
     # subcommand is even chosen, so a plugin that fails to load must not crash commands (like
     # check, used here) that have nothing to do with that plugin.
-    def broken_discover_exporters():
-        raise ImportError("no module named 'xactflow_broken_plugin'")
+    class BrokenEntryPoint:
+        name = "broken"
 
-    monkeypatch.setattr("xactflow.cli.discover_exporters", broken_discover_exporters)
+        def load(self):
+            raise ImportError("no module named 'xactflow_broken_plugin'")
 
-    exit_code = main(["check", str(FIXTURES / "basic" / "top_design.xml")])
+    monkeypatch.setattr(
+        f"xactflow.{group}._entry_points_for_group", lambda _: [BrokenEntryPoint()]
+    )
+    args = [command, str(FIXTURES / "basic" / "top_design.xml")]
+    if command == "link":
+        args.extend(["--lib", str(FIXTURES / "basic")])
+    exit_code = main(args)
 
-    assert exit_code == 1
-    assert capsys.readouterr().err.startswith("error: ")
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "warning:" in captured.err
+    assert "broken" in captured.err
+    assert f"xactflow.{group}s" in captured.err
+    assert "error:" not in captured.err
+    assert "no errors" in captured.out or "no single-document SCR violations" in captured.out
 
 
 def test_no_plugin_subcommands_when_none_are_installed(capsys):

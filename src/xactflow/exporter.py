@@ -60,7 +60,15 @@ def discover_exporters() -> Dict[str, Type[Exporter]]:
     """
     exporters: Dict[str, Type[Exporter]] = {}
     for entry_point in _entry_points_for_group(_ENTRY_POINT_GROUP):
-        exporter_class = entry_point.load()
+        try:
+            exporter_class = entry_point.load()
+        except Exception as exc:
+            print(
+                f"warning: failed to load entry point '{entry_point.name}' in group "
+                f"'{_ENTRY_POINT_GROUP}': {exc}, skipping",
+                file=sys.stderr,
+            )
+            continue
         if not (isinstance(exporter_class, type) and issubclass(exporter_class, Exporter)):
             raise TypeError(
                 f"entry point '{entry_point.name}' in group '{_ENTRY_POINT_GROUP}' does not "
